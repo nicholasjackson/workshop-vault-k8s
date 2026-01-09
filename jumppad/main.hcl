@@ -37,6 +37,29 @@ resource "container" "vault" {
   }
 }
 
+resource "container" "postgres" {
+  image {
+    name = "postgres:16"
+  }
+
+  network {
+    id         = resource.network.main.meta.id
+    ip_address = "10.5.0.201"
+  }
+
+  environment = {
+    POSTGRES_USER     = "postgres"
+    POSTGRES_PASSWORD = "postgres"
+    POSTGRES_DB       = "demo"
+  }
+
+  port {
+    local  = 5432
+    remote = 5432
+    host   = 5432
+  }
+}
+
 resource "helm" "vault_secrets_operator" {
   cluster = resource.k8s_cluster.k3s
 
@@ -72,4 +95,24 @@ output "VAULT_ADDR" {
 
 output "VAULT_TOKEN" {
   value = "root"
+}
+
+output "POSTGRES_HOST" {
+  value = "localhost"
+}
+
+output "POSTGRES_PORT" {
+  value = "5432"
+}
+
+output "POSTGRES_USER" {
+  value = "postgres"
+}
+
+output "POSTGRES_PASSWORD" {
+  value = "postgres"
+}
+
+output "POSTGRES_DB" {
+  value = "demo"
 }

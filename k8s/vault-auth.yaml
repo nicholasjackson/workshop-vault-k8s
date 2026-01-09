@@ -1,0 +1,41 @@
+---
+# ServiceAccount for the application to authenticate with Vault
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: demo-app
+  namespace: default
+---
+# Service account token for Vault authentication
+apiVersion: v1
+kind: Secret
+metadata:
+  name: demo-app-token
+  namespace: default
+  annotations:
+    kubernetes.io/service-account.name: demo-app
+type: kubernetes.io/service-account-token
+---
+# VaultConnection defines the Vault server to connect to
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultConnection
+metadata:
+  name: vault
+  namespace: default
+spec:
+  address: http://10.5.0.200:8200
+  skipTLSVerify: true
+---
+# VaultAuth configures how VSO authenticates to Vault
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultAuth
+metadata:
+  name: demo-auth
+  namespace: default
+spec:
+  vaultConnectionRef: vault
+  method: kubernetes
+  mount: kubernetes
+  kubernetes:
+    role: demo-app
+    serviceAccount: demo-app

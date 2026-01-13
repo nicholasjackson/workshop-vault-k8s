@@ -1,3 +1,15 @@
+variable "docs_url" {
+  default = "http://localhost:8080"
+}
+
+variable "vscode_token" {
+  default = "token"
+}
+
+variable "vault_token" {
+  default = "root"
+}
+
 resource "network" "main" {
   subnet = "10.5.0.0/16"
 }
@@ -17,7 +29,7 @@ resource "container" "vault" {
     "vault",
     "server",
     "-dev",
-    "-dev-root-token-id=root",
+    "-dev-root-token-id=${variable.vault_token}",
     "-dev-listen-address=0.0.0.0:8200"
   ]
 
@@ -27,7 +39,7 @@ resource "container" "vault" {
   }
 
   environment = {
-    VAULT_DEV_ROOT_TOKEN_ID = "root"
+    VAULT_DEV_ROOT_TOKEN_ID = variable.vault_token
   }
 
   port {
@@ -54,9 +66,87 @@ resource "container" "postgres" {
   }
 
   port {
-    local  = 5432
-    remote = 5432
-    host   = 5432
+    local = 5432
+    host  = 5432
+  }
+}
+
+module "docs" {
+  source = "./docs"
+}
+
+resource "docs" "docs" {
+  network {
+    id = resource.network.main.meta.id
+  }
+
+  image {
+    name = "ghcr.io/jumppad-labs/docs:v0.5.1"
+  }
+
+  port = 8080
+
+  content = [
+    module.docs.output.book
+  ]
+}
+
+resource "template" "vscode_jumppad" {
+  source      = <<-EOF
+  {
+  "tabs": [
+    {
+      "name": "Docs",
+      "uri": "${variable.docs_url}",
+      "type": "browser",
+      "active": true
+    },
+    {
+      "name": "Terminal",
+      "location": "editor",
+      "type": "terminal"
+    }
+  ]
+  }
+  EOF
+  destination = "${data("vscode")}/workspace.json"
+}
+
+resource "container" "vscode" {
+  network {
+    id = resource.network.main.meta.id
+  }
+
+  image {
+    name = "ghcr.io/nicholasjackson/workshop-vault-k8s:v0.1.0"
+  }
+
+  port {
+    local = 8000
+    host  = 8000
+  }
+
+  volume {
+    source      = "../workspace/k8s"
+    destination = "/workspace/k8s"
+  }
+
+  volume {
+    source      = resource.template.vscode_jumppad.destination
+    destination = "/workspace/k8s/.vscode/workspace.json"
+  }
+
+  volume {
+    source      = resource.k8s_cluster.k3s.kube_config.path
+    destination = "/workspace/.kube/config"
+  }
+
+  environment = {
+    KUBECONFIG       = "/workspace/.kube/config"
+    VAULT_TOKEN      = variable.vault_token
+    VAULT_ADDR       = "http://vault.container.local.jmpd.in:8200"
+    CONNECTION_TOKEN = variable.vscode_token
+    DEFAULT_FOLDER   = "/workspace/k8s"
   }
 }
 

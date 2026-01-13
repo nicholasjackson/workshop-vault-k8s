@@ -1,0 +1,41 @@
+# Architecture Overview
+
+## Vault Secrets Operator
+
+The Vault Secrets Operator (VSO) is a Kubernetes operator that synchronizes secrets from HashiCorp Vault to Kubernetes secrets. This allows your applications to consume Vault secrets using native Kubernetes secret references.
+
+## How It Works
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    Kubernetes Cluster                        │
+│                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    │
+│  │    VSO       │───►│  K8s Secret  │◄───│  Application │    │
+│  │  Operator    │    │              │    │     Pod      │    │
+│  └──────┬───────┘    └──────────────┘    └──────────────┘    │
+│         │                                                    │
+└─────────┼────────────────────────────────────────────────────┘
+          │
+          ▼
+   ┌──────────────┐
+   │    Vault     │
+   │    Server    │
+   └──────────────┘
+```
+
+1. **VaultConnection** - Defines how to connect to the Vault server
+2. **VaultAuth** - Configures authentication method (Kubernetes, JWT, AppRole, etc.)
+3. **VaultStaticSecret** - Syncs static KV secrets to Kubernetes
+4. **VaultDynamicSecret** - Syncs dynamic secrets (database credentials, etc.)
+
+## Workshop Environment
+
+In this workshop, our environment consists of:
+
+| Component | Address | Description |
+|-----------|---------|-------------|
+| Vault | http://10.5.0.200:8200 | Vault server in dev mode |
+| PostgreSQL | 10.5.0.201:5432 | Database for dynamic secrets |
+| K3s | - | Kubernetes cluster |
+| VSO | - | Vault Secrets Operator |

@@ -1,0 +1,15 @@
+{
+    "workbench.colorTheme": "Visual Studio Dark",
+    "editor.minimap.enabled": false,
+    "workbench.startupEditor": "newUntitledFile",
+    "editor.scrollBeyondLastLine": false,
+    "editor.tabSize": 4,
+    "terminal.integrated.fontFamily": "Hack",
+    "editor.suggestSelection": "first",
+    "terminal.integrated.tabs.enabled": false,
+    "[yaml]": {
+        "editor.formatOnSave": true,
+    },
+    "editor.accessibilitySupport": "off",
+    "terminal.integrated.defaultLocation": "editor"
+}

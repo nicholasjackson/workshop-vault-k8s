@@ -1,0 +1,64 @@
+# Configuring the Database Secrets Engine
+
+Before we can use dynamic secrets in Kubernetes, we need to configure Vault's database secrets engine.
+
+## Run the Setup Script
+
+Run the database setup script:
+
+```bash
+./scripts/setup-database.sh
+```
+
+This script performs the following steps:
+
+### 1. Enable the Database Secrets Engine
+
+```bash
+vault secrets enable database
+```
+
+### 2. Configure the PostgreSQL Connection
+
+```bash
+vault write database/config/demo-db \
+  plugin_name="postgresql-database-plugin" \
+  allowed_roles="demo-role" \
+  connection_url="postgresql://{{username}}:{{password}}@10.5.0.201:5432/demo?sslmode=disable" \
+  username="postgres" \
+  password="postgres"
+```
+
+### 3. Create a Database Role
+
+```bash
+vault write database/roles/demo-role \
+  db_name="demo-db" \
+  creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" \
+  default_ttl="60s" \
+  max_ttl="120s"
+```
+
+Note: We're using a short 60-second TTL so you can observe credential rotation.
+
+## Test Dynamic Credentials
+
+Generate credentials manually:
+
+```bash
+vault read database/creds/demo-role
+```
+
+You'll see output like:
+
+```
+Key                Value
+---                -----
+lease_id           database/creds/demo-role/...
+lease_duration     1m
+lease_renewable    true
+password           A1a-...
+username           v-root-demo-role-...
+```
+
+Try running the command again - you'll get different credentials each time!

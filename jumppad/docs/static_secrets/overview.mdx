@@ -1,0 +1,37 @@
+# Static Secrets Overview
+
+Static secrets are key-value pairs stored in Vault's KV secrets engine. These are secrets that don't change automatically - they remain constant until manually updated.
+
+## Use Cases
+
+Static secrets are ideal for:
+
+- API keys
+- Configuration values
+- Certificates
+- Any secret that doesn't need automatic rotation
+
+## KV Secrets Engine
+
+Vault's KV (Key-Value) secrets engine stores arbitrary secrets. Version 2 (kv-v2) provides:
+
+- Secret versioning
+- Soft delete and recovery
+- Metadata tracking
+
+## Demo Secret
+
+During setup, we created a demo secret at `secret/demo/config`:
+
+```bash
+vault kv get secret/demo/config
+```
+
+This contains:
+- `username` - A demo username
+- `password` - A demo password
+- `api_key` - A demo API key
+
+## VaultStaticSecret Resource
+
+The Vault Secrets Operator uses `VaultStaticSecret` custom resources to sync KV secrets to Kubernetes. In the next pages, we'll configure authentication and create a VaultStaticSecret to sync our demo secret.

@@ -1,0 +1,41 @@
+# Dynamic Secrets Overview
+
+Dynamic secrets are generated on-demand by Vault and automatically expire. Unlike static secrets, dynamic secrets are unique to each request and have a limited lifetime (TTL).
+
+## Benefits of Dynamic Secrets
+
+- **No shared credentials** - Each application instance gets unique credentials
+- **Automatic expiration** - Credentials expire after their TTL
+- **Automatic rotation** - VSO handles credential renewal
+- **Audit trail** - Every credential generation is logged
+
+## Database Secrets Engine
+
+Vault's database secrets engine generates database credentials dynamically. It supports many databases including:
+
+- PostgreSQL
+- MySQL/MariaDB
+- MongoDB
+- Microsoft SQL Server
+- Oracle
+- And more...
+
+## How It Works
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ Application │────►│    Vault    │────►│  Database   │
+│             │◄────│             │     │             │
+└─────────────┘     └─────────────┘     └─────────────┘
+     Request           Generate           Create
+    credentials       credentials          user
+```
+
+1. Application (via VSO) requests credentials from Vault
+2. Vault generates a new database user with a random password
+3. Vault returns the credentials with a TTL
+4. When the TTL expires, Vault revokes the database user
+
+## Workshop Setup
+
+In this workshop, we have a PostgreSQL database at `10.5.0.201:5432`. We'll configure Vault to generate dynamic PostgreSQL credentials.

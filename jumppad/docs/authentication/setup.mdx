@@ -1,0 +1,45 @@
+# Configure Kubernetes Authentication
+
+Generally the steps in this section are pre-configured by the administrators for the Vault cluster;
+however, it is useful to understand how to set up Kubernetes authentication in Vault. 
+
+## Enabling the Kubernetes Auth Method in Vault
+
+To fetch secrets from Vault, the kubernetes operator needs to authenticate with vault
+so that Vault can determine which secrets the application is authorized to access.
+
+In Kubernetes a service account token pod is used to authenticate with Vault, Vault
+validates this token with the Kubernetes API server and then issues a Vault token with
+the appropriate permissions to access the secrets.
+
+This process is handled by the Vault operator which has already been installed in your cluster.
+
+The steps to configure Vault for Kubernetes authentication are as follows:
+1. Enable the Kubernetes authentication method in Vault.
+2. Create the token reviewer service account in Kubernetes.
+3. Create a ClusterRoleBinding for the token reviewer service account.
+4. Configure the Kubernetes authentication method in Vault with the service account JWT,
+    Kubernetes API server address, and CA certificate.
+
+## Familiarize Yourself with the Environment
+
+Before we begin, let's familiarize ourselves with the environment we'll be using for this workshop.
+
+### Vault Server
+Commonly when configuring Vault you would use an infrastructure as code tool like Terraform to manage
+the configuration. However, for this workshop we will be using the Vault CLI to manually configure
+the necessary components. Understanding the Vault CLI is important for managing Vault, it is perfect
+for learning and experimenting with Vault.
+
+The environment following environment variables that the Vault CLI uses has been pre-configured for you:
+
+* `VAULT_ADDR = http://vault.container.local.jmpd.in:8200` - The address of the Vault server.
+* `VAULT_TOKEN = root` - The root token for the Vault server.
+
+Commonly you would not use the root token for day-to-day operations, if you are using the Vault CLI
+you would use the `vault login` command to authenticate and obtain a token with the appropriate
+permissions. For simplicity we are using the root token for this workshop. In a production
+environment the root token for Vault is created during the initialization process; however,
+with development mode you can set a simple token like `root`.
+
+Let's begin by enabling the Kubernetes authentication method in Vault.

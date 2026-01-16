@@ -1,37 +1,66 @@
-# Static Secrets Overview
+# Static Secrets
 
-Static secrets are key-value pairs stored in Vault's KV secrets engine. These are secrets that don't change automatically - they remain constant until manually updated.
+In the previous chapter we configured Vault to authenticate Kubernetes workloads using the
+Kubernetes authentication method. This allows pods running in your cluster to prove their
+identity to Vault. However, authentication alone isn't enough - we also need to tell Vault
+what each workload is allowed to access.
 
-## Use Cases
+This is where static secrets come in. Static secrets are the simplest type of secret in Vault:
+key-value pairs that you store and retrieve manually. Unlike dynamic secrets (which we'll cover
+in the next chapter), static secrets don't change automatically - they remain constant until
+you explicitly update them.
 
-Static secrets are ideal for:
+## When to Use Static Secrets
 
-- API keys
-- Configuration values
-- Certificates
-- Any secret that doesn't need automatic rotation
+Static secrets are the right choice for values that don't need automatic rotation:
 
-## KV Secrets Engine
+- **API keys for third-party services** - Keys for services like Stripe, SendGrid, or Twilio
+  that you rotate on your own schedule
+- **Configuration values** - Feature flags, environment-specific settings, or application
+  configuration that happens to be sensitive
+- **TLS certificates** - Though Vault can also issue these dynamically through its PKI engine (we will cover this later)
+- **Legacy credentials** - Passwords for systems that don't support dynamic credential generation
 
-Vault's KV (Key-Value) secrets engine stores arbitrary secrets. Version 2 (kv-v2) provides:
+In production, you might use a mix of static and dynamic secrets depending on your security
+requirements and what each system supports.
 
-- Secret versioning
-- Soft delete and recovery
-- Metadata tracking
+## The KV Secrets Engine
 
-## Demo Secret
+Vault organizes secrets using "secrets engines" - pluggable backends that handle different
+types of secret storage and generation. The KV (Key-Value) secrets engine is what stores
+static secrets.
 
-During setup, we created a demo secret at `secret/demo/config`:
+Vault supports two versions of the KV engine:
 
-```bash
-vault kv get secret/demo/config
-```
+- **KV v1** - Simple key-value storage with no versioning
+- **KV v2** - Adds versioning, soft delete, and metadata
 
-This contains:
-- `username` - A demo username
-- `password` - A demo password
-- `api_key` - A demo API key
+You may be wondering which version to use, generally we recommend KV v2 for its additional features.
+However, if you are managing a large number of secrets and need to optimize both storage
+and performance, KV v1 can be a suitable choice due to its simpler architecture.
 
-## VaultStaticSecret Resource
+In this example we'll be using KV v2, which provides several important capabilities:
 
-The Vault Secrets Operator uses `VaultStaticSecret` custom resources to sync KV secrets to Kubernetes. In the next pages, we'll configure authentication and create a VaultStaticSecret to sync our demo secret.
+- **Secret versioning** - Every time you update a secret, Vault keeps the previous versions.
+  This is invaluable when you need to roll back after a bad deployment or investigate when
+  a credential was last changed.
+- **Soft delete and recovery** - Accidentally deleted a secret? With v2, you can recover it
+  within a configurable time window.
+- **Metadata tracking** - Store additional information about your secrets, like who last
+  updated them or what they're used for.
+
+In development mode, the KV v2 secrets engine is already enabled at the `secret/` path,
+so we can start using it immediately. In production, you would enable and configure secrets
+engines explicitly.
+
+## What We'll Cover
+
+The steps to sync a static secret from Vault to Kubernetes are:
+
+1. **Create a secret in Vault** - Store the credentials we want to sync
+2. **Create a Vault policy** - Define what paths in Vault can be accessed
+3. **Create a Vault role** - Link Kubernetes service accounts to the policy
+4. **Create a Kubernetes service account** - The identity your workload will use
+5. **Configure the Vault Secrets Operator** - Tell VSO how to sync the secret
+
+Let's start by getting hands-on with storing and retrieving secrets using the Vault CLI.

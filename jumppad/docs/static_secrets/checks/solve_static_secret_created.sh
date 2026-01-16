@@ -1,0 +1,18 @@
+#!/bin/bash -e
+
+kubectl apply -f - <<EOF
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultStaticSecret
+metadata:
+  name: demo-secret
+  namespace: default
+spec:
+  vaultAuthRef: demo-auth
+  mount: secret
+  path: demo/config
+  type: kv-v2
+  refreshAfter: 30s
+  destination:
+    name: demo-app-secret
+    create: true
+EOF

@@ -73,6 +73,10 @@ resource "container" "postgres" {
 
 module "docs" {
   source = "./docs"
+
+  variables = {
+    target = "resource.container.vscode"
+  }
 }
 
 resource "docs" "docs" {

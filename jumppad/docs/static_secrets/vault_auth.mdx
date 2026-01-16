@@ -1,33 +1,27 @@
-# Configuring Vault Authentication
+# Configuring the Vault Secrets Operator
 
-Before VSO can sync secrets, it needs to authenticate with Vault. We'll use Kubernetes authentication, which allows pods to authenticate using their service account tokens.
+We've verified that our service account can authenticate with Vault and read secrets. Now
+let's configure the Vault Secrets Operator (VSO) to automate this process.
 
-## Create a Service Account
+VSO uses Custom Resource Definitions (CRDs) to define how it should connect to Vault and
+sync secrets. We need to create two resources:
 
-First, create a service account for your application:
+1. **VaultConnection** - Defines how to connect to the Vault server
+2. **VaultAuth** - Defines how to authenticate with Vault
 
-```yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: demo-app
-  namespace: default
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: demo-app-token
-  namespace: default
-  annotations:
-    kubernetes.io/service-account.name: demo-app
-type: kubernetes.io/service-account-token
-```
+## VaultConnection
 
-Note: Since Kubernetes 1.24, service account tokens are not automatically created. We explicitly create a token secret.
+The VaultConnection resource tells VSO where your Vault server is located. You typically
+need one VaultConnection per namespace, though administrators can configure a default
+cluster-wide connection when installing the operator.
 
-## Create a VaultConnection
+The key configuration is the `address` field, which should point to your Vault server.
+In production, this would use HTTPS with proper TLS certificates.
 
-Define how VSO connects to Vault:
+<Task id="configure_vso">
+
+Create a file called `vault-connection.yaml` with the following content and apply
+it using kubectl:
 
 ```yaml
 apiVersion: secrets.hashicorp.com/v1beta1
@@ -39,9 +33,18 @@ spec:
   address: http://10.5.0.200:8200
 ```
 
-## Create a VaultAuth
+Once the connection has been created, next we need to create a VaultAuth resource.
 
-Configure the authentication method:
+## VaultAuth
+
+The VaultAuth resource tells VSO how to authenticate with Vault. It references:
+- The VaultConnection to use
+- The authentication method (Kubernetes in our case)
+- The Vault role to authenticate as
+- The Kubernetes service account to use
+
+Create a file called `vault-auth.yaml` with the following content and apply 
+to your cluster:
 
 ```yaml
 apiVersion: secrets.hashicorp.com/v1beta1
@@ -58,16 +61,39 @@ spec:
     serviceAccount: demo-app
 ```
 
-## Apply the Configuration
+</Task>
 
-Apply all the authentication resources:
+## Understanding the VaultAuth Configuration
 
-```bash
-kubectl apply -f k8s/vault-auth.yaml
-```
+Let's break down the VaultAuth fields:
 
-Verify the VaultAuth status:
+- **vaultConnectionRef** - References the VaultConnection resource by name. This tells VSO
+  which Vault server to authenticate against.
+
+- **method** - The Vault auth method to use. We're using `kubernetes`, but VSO also supports
+  `jwt`, `appRole`, and others.
+
+- **mount** - The path where the auth method is mounted in Vault. We enabled Kubernetes auth
+  at the default `kubernetes` mount point.
+
+- **kubernetes.role** - The Vault role to authenticate as. This must match a role we created
+  with `vault write auth/kubernetes/role/...`.
+
+- **kubernetes.serviceAccount** - The Kubernetes service account whose token will be used
+  for authentication. This must match what's configured in the Vault role.
+
+## Verifying the Configuration
+
+You can check if VSO successfully authenticated by describing the VaultAuth resource:
 
 ```bash
 kubectl describe vaultauth demo-auth
 ```
+
+Look for the `Status` section - it should show that authentication was successful. If there
+are errors, the events will show what went wrong.
+
+## Next Steps
+
+With authentication configured, we're ready for the final step: creating a VaultStaticSecret
+to actually sync our secret from Vault to Kubernetes.

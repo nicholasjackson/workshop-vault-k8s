@@ -1,0 +1,43 @@
+# Configure Authentication
+
+Now the token reviewer service account has been created in Kubernetes, we can proceed to configure
+the Kubernetes authentication method in Vault.
+
+To configure the Kubernetes authentication method in Vault, we need to provide the following information:
+- The JWT token from the token reviewer service account
+- The address of the Kubernetes API server
+- The CA certificate for the Kubernetes API server
+
+<Task id="configure_vault">
+
+First we need to retrieve the address of the Kubernetes API server. We can do this by running the following command in your terminal:
+
+```bash
+K8S_HOST=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+```
+
+Next, we need to get the CA certificate for the Kubernetes API, Vault will use this certificate
+to validate the TLS connection to the API server. Run the following command in your terminal:
+
+```bash
+K8S_CA_CERT=$(kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d)
+```
+
+Finally, we need to retrieve the JWT token from the token reviewer service account.
+
+```bash
+TOKEN_REVIEWER_JWT=$(kubectl get secret vault-token-reviewer-token -o jsonpath='{.data.token}' | base64 -d)
+```
+
+Once you have set the variables you can set the configuration for the Kubernetes authentication method in Vault by running the following command in your terminal:
+
+```
+vault write auth/kubernetes/config \
+  kubernetes_host="${K8S_HOST}" \
+  kubernetes_ca_cert="${K8S_CA_CERT}" \
+  token_reviewer_jwt="${TOKEN_REVIEWER_JWT}"
+```
+</Task>
+
+Now that you have configured the Kubernetes authentication method in Vault, let's
+now see how you can use the operator to sync secrets from Vault to Kubernetes.

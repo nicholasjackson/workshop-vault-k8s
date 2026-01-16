@@ -9,3 +9,8 @@ RUN curl -fsSL https://releases.hashicorp.com/vault/1.18.3/vault_1.18.3_linux_am
 # Install kubectl
 RUN curl -fsSLo /usr/local/bin/kubectl "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
     chmod +x /usr/local/bin/kubectl
+
+# Install PostgreSQL client
+RUN apt-get update --allow-releaseinfo-change && \
+    apt-get install -y --no-install-recommends postgresql-client && \
+    rm -rf /var/lib/apt/lists/*

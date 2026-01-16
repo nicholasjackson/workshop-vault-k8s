@@ -1,0 +1,104 @@
+# Creating a Policy and Role
+
+Now that we have a secret stored in Vault, we need to configure access control so that our
+Kubernetes workloads can read it. This involves two components:
+
+1. **A Vault Policy** - Defines what paths in Vault can be accessed and what operations are allowed
+2. **A Kubernetes Auth Role** - Links Kubernetes service accounts to Vault policies
+
+## Understanding Vault Policies
+
+Vault uses policies to control access to secrets. A policy is a set of rules that define:
+- Which paths in Vault can be accessed
+- What operations (read, write, delete, list) are allowed on those paths
+
+By default, Vault denies all access - you must explicitly grant permissions. This follows the
+principle of least privilege: workloads should only have access to the secrets they need.
+
+## The Policy Path
+
+Remember when we created our secret, the output showed `secret/data/demo/config`? For KV v2,
+the API paths are different from the CLI paths:
+
+| CLI Path | API Path (for policies) |
+|----------|------------------------|
+| `secret/demo/config` | `secret/data/demo/config` |
+
+When writing policies, you must use the API path format. This catches many people out, so
+it's worth remembering: **always include `/data/` in KV v2 policy paths**.
+
+## Creating the Policy
+
+We'll create a policy called `demo-policy` that grants read access to our secret.
+
+<Task id="create_policy_and_role">
+
+First, create the Vault policy that allows reading our demo secret:
+
+```bash
+vault policy write demo-policy - <<EOF
+path "secret/data/demo/config" {
+  capabilities = ["read"]
+}
+EOF
+```
+
+You can verify the policy was created by reading it back:
+
+```bash
+vault policy read demo-policy
+```
+
+## Creating the Kubernetes Auth Role
+
+Now we need to create a role in Vault's Kubernetes auth method. This role defines:
+- Which Kubernetes service accounts can authenticate
+- Which namespace(s) those service accounts must be in
+- Which Vault policies they receive after authenticating
+
+The role acts as a bridge between Kubernetes identity and Vault permissions.
+
+Create a role called `demo-app` that:
+- Allows the `demo-app` service account from the `default` namespace to authenticate
+- Grants the `demo-policy` we just created
+
+```bash
+vault write auth/kubernetes/role/demo-app \
+  bound_service_account_names=demo-app \
+  bound_service_account_namespaces=default \
+  policies=demo-policy \
+  ttl=1h
+```
+
+You can verify the role was created:
+
+```bash
+vault read auth/kubernetes/role/demo-app
+```
+
+</Task>
+
+## Understanding the Role Configuration
+
+Let's break down what each field means:
+
+- **bound_service_account_names** - The name(s) of Kubernetes service accounts that can use this role.
+  You can specify multiple names or use `*` to allow any service account (not recommended in production).
+
+- **bound_service_account_namespaces** - The namespace(s) where those service accounts must exist.
+  This prevents a service account in a different namespace from impersonating your workload.
+
+- **policies** - The Vault policies to attach when authentication succeeds. You can attach multiple
+  policies if your workload needs access to different secrets.
+
+- **ttl** - How long the Vault token is valid. After this time, the workload must re-authenticate.
+  Shorter TTLs are more secure but increase authentication overhead.
+
+## Next Steps
+
+We've configured Vault to recognize a service account called `demo-app` from the `default`
+namespace and grant it read access to our secret. But that service account doesn't exist yet
+in Kubernetes.
+
+In the next section, we'll create the service account and test that authentication works
+before setting up the Vault Secrets Operator.

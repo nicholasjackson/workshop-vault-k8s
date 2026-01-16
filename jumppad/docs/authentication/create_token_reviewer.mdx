@@ -1,0 +1,51 @@
+# Create Token Reviewer
+
+So that Vault can use the Kubernetes API to validate service account tokens,
+we need to create a Token Reviewer service account and configure the appropriate
+RBAC permissions.
+
+The following YAML manifest creates a service account named `vault-token-reviewer`, a secret
+to hold the service account token, and a ClusterRoleBinding that grants the service account
+the `system:auth-delegator` role.
+
+```yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-token-reviewer
+  namespace: default
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vault-token-reviewer-token
+  namespace: default
+  annotations:
+    kubernetes.io/service-account.name: vault-token-reviewer
+type: kubernetes.io/service-account-token
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vault-token-reviewer-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - kind: ServiceAccount
+    name: vault-token-reviewer
+    namespace: default
+```
+
+<Task id="create_token">
+Apply the manifest by running the following command in your terminal:
+
+```bash
+kubectl apply -f ./vault-token-reviewer.yaml
+```
+</Task>
+
+Now that the token reviewer service account has been created, we can proceed to configure
+the Kubernetes authentication method in Vault.

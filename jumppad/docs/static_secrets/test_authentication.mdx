@@ -1,0 +1,112 @@
+# Testing Authentication
+
+Before configuring the Vault Secrets Operator, it's valuable to manually test that our
+service account can authenticate with Vault and retrieve secrets. This same process is useful
+for troubleshooting when things don't work as expected.
+
+## The Authentication Flow
+
+When a Kubernetes workload authenticates with Vault, the following happens:
+
+1. The workload sends its service account JWT to Vault's Kubernetes auth endpoint
+2. Vault calls the Kubernetes API (using the token reviewer) to validate the JWT
+3. If valid, Vault checks if the service account matches any configured roles
+4. If a matching role is found, Vault issues a token with the role's policies attached
+
+Let's walk through this process manually.
+
+## Retrieving the Service Account Token
+
+First, we need to get the JWT from our service account's token secret.
+
+<Task id="test_authentication">
+
+Extract the JWT from the demo-app-token secret:
+
+```bash
+SA_JWT=$(kubectl get secret demo-app-token -o jsonpath='{.data.token}' | base64 -d)
+```
+
+You can inspect this JWT if you're curious - it's a standard JSON Web Token with claims about
+the service account's identity. The important claims are:
+- `sub` - The subject (service account name)
+- `kubernetes.io/serviceaccount/namespace` - The namespace
+- `kubernetes.io/serviceaccount/service-account.name` - The service account name
+
+## Authenticating with Vault
+
+Now we'll use this JWT to authenticate with Vault's Kubernetes auth method. The `vault write`
+command sends the JWT to Vault and receives a Vault token in response.
+
+```bash
+vault write auth/kubernetes/login role=demo-app jwt=$SA_JWT
+```
+
+You should see output similar to:
+
+```
+Key                                       Value
+---                                       -----
+token                                     hvs.CAESIJ...
+token_accessor                            ZqHvN...
+token_duration                            1h
+token_renewable                           true
+token_policies                            ["default" "demo-policy"]
+identity_policies                         []
+policies                                  ["default" "demo-policy"]
+token_meta_role                           demo-app
+token_meta_service_account_name           demo-app
+token_meta_service_account_namespace      default
+```
+
+Notice that:
+- The token has a 1-hour duration (as we configured in the role)
+- It has `demo-policy` attached (which grants read access to our secret)
+- The metadata shows which service account authenticated
+
+## Reading the Secret
+
+Now let's use this Vault token to read our secret. We'll store the token and use it to
+authenticate:
+
+```bash
+VAULT_SA_TOKEN=$(vault write -field=token auth/kubernetes/login role=demo-app jwt=$SA_JWT)
+```
+
+Then read the secret using this token:
+
+```bash
+VAULT_TOKEN=$VAULT_SA_TOKEN vault kv get secret/demo/config
+```
+
+</Task>
+
+If everything is configured correctly, you should see your secret data. This proves that:
+- The service account token is valid
+- Vault can validate it via the Kubernetes API
+- The role correctly maps the service account to the policy
+- The policy grants read access to the secret path
+
+## Troubleshooting
+
+If authentication fails, here are common issues to check:
+
+**"permission denied" error:**
+- Verify the role exists: `vault read auth/kubernetes/role/demo-app`
+- Check the bound service account name and namespace match exactly
+- Ensure the policy path uses `/data/` for KV v2
+
+**"invalid role" error:**
+- The role name in the login command must match the role you created
+- Role names are case-sensitive
+
+**"service account not found" error:**
+- The Kubernetes auth method can't validate the JWT
+- Check that the token reviewer is configured correctly
+- Verify the Kubernetes API is accessible from Vault
+
+## Next Steps
+
+We've verified that authentication works manually. Now we're ready to configure the Vault
+Secrets Operator to automate this process. VSO will use the same authentication flow, but
+instead of us running commands, it will continuously sync secrets to Kubernetes.

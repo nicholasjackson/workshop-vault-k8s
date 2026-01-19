@@ -146,6 +146,7 @@ resource "container" "vscode" {
   }
 
   environment = {
+    LC_ALL           = "C"
     KUBECONFIG       = "/workspace/.kube/config"
     VAULT_TOKEN      = variable.vault_token
     VAULT_ADDR       = "http://vault.container.local.jmpd.in:8200"

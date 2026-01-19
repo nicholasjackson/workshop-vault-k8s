@@ -1,0 +1,47 @@
+# Creating a Database Role
+
+Now that the database secrets engine is configured, we need to create a role that defines how Vault generates credentials.
+
+<Task id="create_database_role">
+
+## Create a Database Role
+
+We are going to create a role that defines how Vault generates credentials. In the role you
+can customize the SQL statements used to create the user and what permissions they have.
+
+Create the role with the following command:
+
+```bash
+vault write database/roles/demo-role \
+  db_name="demo-db" \
+  creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" \
+  default_ttl="60s" \
+  max_ttl="120s"
+```
+
+Key fields:
+- **db_name** - References our database config
+- **creation_statements** - SQL to create the user with appropriate permissions
+- **default_ttl** - How long credentials are valid (60 seconds for demo)
+- **max_ttl** - Maximum lifetime even with renewals
+
+Note: We're using a short 60-second TTL so you can observe credential rotation during the workshop.
+In production, you would typically use a longer TTL, how long depends on your use case, and risk appetite.
+
+## Update the Policy
+
+Update the `demo-policy` to include access to database credentials:
+
+```bash
+vault policy write demo-policy - <<EOF
+path "secret/data/demo/*" {
+  capabilities = ["read", "list"]
+}
+
+path "database/creds/demo-role" {
+  capabilities = ["read"]
+}
+EOF
+```
+
+</Task>

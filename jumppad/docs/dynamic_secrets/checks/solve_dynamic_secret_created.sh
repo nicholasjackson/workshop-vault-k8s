@@ -1,5 +1,6 @@
----
-# VaultDynamicSecret syncs dynamic database credentials from Vault to a Kubernetes Secret
+#!/bin/bash -e
+
+kubectl apply -f - <<EOF
 apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultDynamicSecret
 metadata:
@@ -13,3 +14,4 @@ spec:
     name: demo-db-secret
     create: true
   renewalPercent: 67
+EOF

@@ -2,23 +2,19 @@
 
 Before we can use dynamic secrets in Kubernetes, we need to configure Vault's database secrets engine.
 
-## Run the Setup Script
+<Task id="configure_database_engine">
 
-Run the database setup script:
+## Enable the Database Secrets Engine
 
-```bash
-./scripts/setup-database.sh
-```
-
-This script performs the following steps:
-
-### 1. Enable the Database Secrets Engine
+First, enable the database secrets engine:
 
 ```bash
 vault secrets enable database
 ```
 
-### 2. Configure the PostgreSQL Connection
+## Configure the PostgreSQL Connection
+
+Next, configure Vault to connect to our PostgreSQL database. This tells Vault how to create users:
 
 ```bash
 vault write database/config/demo-db \
@@ -29,36 +25,45 @@ vault write database/config/demo-db \
   password="postgres"
 ```
 
-### 3. Create a Database Role
+Key configuration:
+- **plugin_name** - The database plugin to use
+- **allowed_roles** - Which roles can use this connection
+- **connection_url** - Template URL with `{{username}}` and `{{password}}` placeholders
+- **username/password** - Admin credentials Vault uses to create new users
+
+If you look at the `connection_url`, you'll see it has the template variables `{{username}}` and `{{password}}`. Vault will replace these with the admin username and password to connect to the database.
+
+```
+postgresql://{{username}}:{{password}}@10.5.0.201:5432/demo?sslmode=disable
+```
+
+You can hard code the username and password directly in the URL, but using template variables is more secure. It also allows you to use a really nice feature of the database secrets engine - rotating the root credentials. Let's see how that works next.
+
+</Task>
+
+## Rotate the Root Credentials
+
+When you use templated variables, Vault allows you to rotate the root credentials so that only Vault knows them. You can not retrieve this password later so you either need an alternate admin user or you
+can use vault to generate credentials or you. 
+
+Let's rotate the `postgres` user's password now:
 
 ```bash
-vault write database/roles/demo-role \
-  db_name="demo-db" \
-  creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" \
-  default_ttl="60s" \
-  max_ttl="120s"
+vault write -force database/rotate-root/demo-db
 ```
 
-Note: We're using a short 60-second TTL so you can observe credential rotation.
+After rotation, the original `postgres` password will no longer work - only Vault can access the database with admin privileges.
 
-## Test Dynamic Credentials
-
-Generate credentials manually:
+Let's verify that the rotation worked by trying to connect with the old password:
 
 ```bash
-vault read database/creds/demo-role
+psql -h 10.5.0.201 -U postgres -d demo -c "\du"
 ```
 
-You'll see output like:
+You should see a connection error because the original `postgres` password no longer works - Vault has rotated it to a new random value that only Vault knows.
 
-```
-Key                Value
----                -----
-lease_id           database/creds/demo-role/...
-lease_duration     1m
-lease_renewable    true
-password           A1a-...
-username           v-root-demo-role-...
+```bash
+psql: error: connection to server at "10.5.0.201", port 5432 failed: FATAL:  password authentication failed for user "postgres"
 ```
 
-Try running the command again - you'll get different credentials each time!
+Next, let's create a role that defines how to generate dynamic database credentials.

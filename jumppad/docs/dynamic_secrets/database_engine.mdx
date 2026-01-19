@@ -20,7 +20,7 @@ Next, configure Vault to connect to our PostgreSQL database. This tells Vault ho
 vault write database/config/demo-db \
   plugin_name="postgresql-database-plugin" \
   allowed_roles="demo-role" \
-  connection_url="postgresql://{{username}}:{{password}}@10.5.0.201:5432/demo?sslmode=disable" \
+  connection_url="postgresql://{{username}}:{{password}}@10.10.0.201:5432/demo?sslmode=disable" \
   username="postgres" \
   password="postgres"
 ```
@@ -34,7 +34,7 @@ Key configuration:
 If you look at the `connection_url`, you'll see it has the template variables `{{username}}` and `{{password}}`. Vault will replace these with the admin username and password to connect to the database.
 
 ```
-postgresql://{{username}}:{{password}}@10.5.0.201:5432/demo?sslmode=disable
+postgresql://{{username}}:{{password}}@10.10.0.201:5432/demo?sslmode=disable
 ```
 
 You can hard code the username and password directly in the URL, but using template variables is more secure. It also allows you to use a really nice feature of the database secrets engine - rotating the root credentials. Let's see how that works next.
@@ -57,13 +57,13 @@ After rotation, the original `postgres` password will no longer work - only Vaul
 Let's verify that the rotation worked by trying to connect with the old password:
 
 ```bash
-psql -h 10.5.0.201 -U postgres -d demo -c "\du"
+psql -h 10.10.0.201 -U postgres -d demo -c "\du"
 ```
 
 You should see a connection error because the original `postgres` password no longer works - Vault has rotated it to a new random value that only Vault knows.
 
 ```bash
-psql: error: connection to server at "10.5.0.201", port 5432 failed: FATAL:  password authentication failed for user "postgres"
+psql: error: connection to server at "10.10.0.201", port 5432 failed: FATAL:  password authentication failed for user "postgres"
 ```
 
 Next, let's create a role that defines how to generate dynamic database credentials.

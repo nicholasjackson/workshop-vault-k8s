@@ -7,5 +7,5 @@ metadata:
   name: vault
   namespace: default
 spec:
-  address: http://10.5.0.200:8200
+  address: http://10.10.0.200:8200
 EOF

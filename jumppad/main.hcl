@@ -1,5 +1,5 @@
 variable "docs_url" {
-  default = "http://localhost:8080"
+  default = "http://localhost:80"
 }
 
 variable "vscode_token" {
@@ -88,7 +88,7 @@ resource "docs" "docs" {
     name = "ghcr.io/jumppad-labs/docs:v0.5.1"
   }
 
-  port = 8080
+  port = 80
 
   content = [
     module.docs.output.book

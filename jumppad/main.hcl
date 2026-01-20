@@ -11,7 +11,7 @@ variable "vault_token" {
 }
 
 resource "network" "main" {
-  subnet = "10.10.0.0/16"
+  subnet = "10.100.0.0/16"
 }
 
 resource "k8s_cluster" "k3s" {
@@ -35,7 +35,7 @@ resource "container" "vault" {
 
   network {
     id         = resource.network.main.meta.id
-    ip_address = "10.10.0.200"
+    ip_address = "10.100.0.200"
   }
 
   environment = {
@@ -56,7 +56,7 @@ resource "container" "postgres" {
 
   network {
     id         = resource.network.main.meta.id
-    ip_address = "10.10.0.201"
+    ip_address = "10.100.0.201"
   }
 
   environment = {

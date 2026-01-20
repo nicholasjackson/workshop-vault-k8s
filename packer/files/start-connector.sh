@@ -2,11 +2,12 @@
 
 HOSTNAME=$(hostname)
 
+mkdir -p /root/.jumppad/certs
+
 # Generate CA certificates for the Jumppad connector
 /usr/local/bin/jumppad connector generate-certs \
   --non-interactive \
   --ca \
-  --dns-name \
   /root/.jumppad/certs/
 
 # Generate leaf certificates for the Jumppad connector

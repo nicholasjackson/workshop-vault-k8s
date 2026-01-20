@@ -34,10 +34,13 @@ mv jumppad /usr/local/bin/jumppad
 chmod +x /usr/local/bin/jumppad
 
 cp /tmp/resources/jumppad-connector.service /etc/systemd/system/jumppad-connector.service
+cp /tmp/resources/start-connector.sh /usr/local/bin/start-connector.sh
+chmod +x /usr/local/bin/start-connector.sh
 
 systemctl daemon-reload
 systemctl enable jumppad-connector.service
 
 # Pre-init jumppad
 git clone ${GIT_REPO} /workshop
-jumppad up /workshop
+jumppad up --non-interactive /workshop/jumppad
+jumppad down --force
